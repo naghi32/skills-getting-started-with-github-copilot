@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Clear loading message
       activitiesList.innerHTML = "";
+      activitySelect.innerHTML = '<option value="">-- Select an activity --</option>';
 
       // Populate activities list
       Object.entries(activities).forEach(([name, details]) => {
@@ -41,7 +42,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
         participants.forEach((participant) => {
           const participantItem = document.createElement("li");
-          participantItem.textContent = participant;
+          const participantEmail = document.createElement("span");
+          participantEmail.textContent = participant;
+          participantItem.appendChild(participantEmail);
+
+          if (details.participants.includes(participant)) {
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "remove-participant";
+            removeButton.setAttribute("aria-label", `Remove ${participant}`);
+            removeButton.title = "Remove participant";
+            removeButton.textContent = "×";
+            removeButton.addEventListener("click", () => {
+              unregisterParticipant(name, participant);
+            });
+            participantItem.appendChild(removeButton);
+          }
+
           participantsList.appendChild(participantItem);
         });
 
@@ -59,6 +76,28 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (error) {
       activitiesList.innerHTML = "<p>Failed to load activities. Please try again later.</p>";
       console.error("Error fetching activities:", error);
+    }
+  }
+
+  async function unregisterParticipant(activityName, email) {
+    if (!window.confirm(`Remove ${email} from ${activityName}?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/activities/${encodeURIComponent(activityName)}/signup?email=${encodeURIComponent(email)}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.detail || "Unable to remove participant");
+      }
+
+      await fetchActivities();
+    } catch (error) {
+      window.alert(error.message);
     }
   }
 
